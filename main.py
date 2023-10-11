@@ -55,6 +55,12 @@ if __name__ == "__main__":
     # Get the status of a single device
     response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
 
-    commands = {'commands': [{'code': 'switch_1', 'value': True}]}
-
-    openapi.post('/v1.0/iot-03/devices/{}/commands'.format(DEVICE_ID), commands)
+    if args.turn_on:
+        commands = {'commands': [{'code': 'switch_1', 'value': True}]}
+        openapi.post('/v1.0/iot-03/devices/{}/commands'.format(DEVICE_ID), commands)
+        print("Device turned on.")
+        
+    elif args.turn_off:
+        commands = {'commands': [{'code': 'switch_1', 'value': False}]}
+        openapi.post('/v1.0/iot-03/devices/{}/commands'.format(DEVICE_ID), commands)
+        print("Device turned off.")

@@ -3,11 +3,8 @@ import argparse
 from tuya_connector import TuyaOpenAPI
 import json
 
-# Определяем путь к папке ProgramData и подпапке для вашей программы
-CONFIG_DIR = os.path.join(os.getenv('PROGRAMDATA'), 'TuyaCLIPython')
-
-ENDPOINT = "https://openapi.tuyaeu.com"
-
+# Определяем путь к директории текущего исполняемого файла
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Функция для сохранения авторизационных данных в файл
 def save_credentials(account_name, access_id, access_key, device_id):
@@ -17,27 +14,21 @@ def save_credentials(account_name, access_id, access_key, device_id):
         'DEVICE_ID': device_id
     }
 
-    # Убеждаемся, что папка существует
-    if not os.path.exists(CONFIG_DIR):
-        os.makedirs(CONFIG_DIR)
-
-    config_path = os.path.join(CONFIG_DIR, f"{account_name}.json")
-
+    config_path = os.path.join(BASE_DIR, f"{account_name}.json")
+    
     with open(config_path, 'w') as file:
         json.dump(data, file)
 
     print(f"Credentials saved to {config_path}")
 
-
 # Функция для загрузки авторизационных данных из файла
 def load_credentials(account_name):
-    config_path = os.path.join(CONFIG_DIR, f"{account_name}.json")
-
+    config_path = os.path.join(BASE_DIR, f"{account_name}.json")
+    
     with open(config_path, 'r') as file:
         data = json.load(file)
-
+        
     return data['ACCESS_ID'], data['ACCESS_KEY'], data['DEVICE_ID']
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tuya CLI tool')
@@ -55,8 +46,7 @@ if __name__ == "__main__":
         try:
             ACCESS_ID, ACCESS_KEY, DEVICE_ID = load_credentials(args.acc_name)
         except FileNotFoundError:
-            print(
-                f"Error: Configuration file for account {args.acc_name} not found. Please use --save-credentials first.")
+            print(f"Error: Configuration file for account {args.acc_name} not found. Please use --save-credentials first.")
             exit(1)
 
     openapi = TuyaOpenAPI(ENDPOINT, ACCESS_ID, ACCESS_KEY)

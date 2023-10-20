@@ -1,4 +1,4 @@
-
+*.json
 .idea/workspace.xml
 .idea/vcs.xml
 .idea/TuyaCLIPython.iml

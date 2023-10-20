@@ -57,6 +57,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--turn_on', action='store_true', help='Turn on the device')
     parser.add_argument('--turn_off', action='store_true', help='Turn off the device')
+    parser.add_argument('--switch_state', action='store_true', help='Switch the state of the device to reverse')
 
     parser.add_argument('--cn', action='store_const', dest='endpoint_key', const='cn',
                         help='Use China Data Center endpoint')
@@ -88,6 +89,23 @@ if __name__ == "__main__":
 
             # Get the status of a single device
             response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
+
+            if args.switch_state:
+                # Получим текущее состояние устройства из ответа API
+                current_state = None
+                for item in response['result']:
+                    if 'code' in item and item['code'] == 'switch_1':
+                        current_state = item['value']
+                        break
+
+                # Проверим, удалось ли определить текущее состояние
+                if current_state is not None:
+                    # Переключим состояние на противоположное
+                    commands = {'commands': [{'code': 'switch_1', 'value': not current_state}]}
+                    openapi.post('/v1.0/iot-03/devices/{}/commands'.format(DEVICE_ID), commands)
+                    print("Device state switched.")
+                else:
+                    print("Error: Couldn't determine the current state of the device.")
 
             if args.turn_on:
                 commands = {'commands': [{'code': 'switch_1', 'value': True}]}

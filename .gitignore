@@ -1,7 +1,2 @@
 *.json
-.idea/workspace.xml
-.idea/vcs.xml
-.idea/TuyaCLIPython.iml
-.idea/modules.xml
-.idea/misc.xml
-.idea/inspectionProfiles/profiles_settings.xml
+.idea/*

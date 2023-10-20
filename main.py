@@ -46,7 +46,7 @@ def load_credentials(account_name):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Tuya CLI tool')
+    parser = argparse.ArgumentParser(description='TuyaCLIPython')
     parser.add_argument('--save-credentials', action='store_true', help='Save credentials to a file')
 
     parser.add_argument('--access-id', type=str, help='Access ID for Tuya API')

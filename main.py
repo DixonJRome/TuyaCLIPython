@@ -2,7 +2,7 @@ import os
 import argparse
 from tuya_connector import TuyaOpenAPI
 import json
-
+import sys
 # Определяем путь к директории текущего исполняемого файла
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -35,7 +35,12 @@ def save_credentials(account_name, access_id, access_key, device_id, endpoint_ke
 
 # Функция для загрузки авторизационных данных из файла
 def load_credentials(account_name):
-    config_path = os.path.join(BASE_DIR, f"{account_name}.json")
+    if getattr(sys, 'frozen', False):
+        # Если приложение работает как standalone, найдем абсолютный путь к файлу
+        config_path = os.path.join(os.path.dirname(sys.executable), f"{account_name}.json")
+    else:
+        # Иначе, если работает в режиме скрипта, используем текущий рабочий каталог
+        config_path = os.path.join(BASE_DIR, f"{account_name}.json")
 
     with open(config_path, 'r') as file:
         data = json.load(file)

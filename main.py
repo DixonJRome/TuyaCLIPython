@@ -15,7 +15,6 @@ endpoints = {
     'in': 'https://openapi.tuyain.com'
 }
 
-
 # Функция для сохранения авторизационных данных в файл
 def save_credentials(account_name, access_id, access_key, device_id, endpoint_key):
     data = {
@@ -24,14 +23,12 @@ def save_credentials(account_name, access_id, access_key, device_id, endpoint_ke
         'DEVICE_ID': device_id,
         'ENDPOINT_KEY': endpoint_key  # Теперь сохраняем только ключ
     }
-
     config_path = os.path.join(BASE_DIR, f"{account_name}.json")
 
     with open(config_path, 'w') as file:
         json.dump(data, file)
 
     print(f"Credentials saved to {config_path}")
-
 
 # Функция для загрузки авторизационных данных из файла
 def load_credentials(account_name):
@@ -48,7 +45,6 @@ def load_credentials(account_name):
     endpoint = endpoints[data['ENDPOINT_KEY']]  # Извлекаем полный URL из словаря endpoints
 
     return data['ACCESS_ID'], data['ACCESS_KEY'], data['DEVICE_ID'], endpoint
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='TuyaCLIPython')
@@ -82,8 +78,9 @@ if __name__ == "__main__":
     if args.save_credentials:
         if not args.endpoint_key:
             print(
-                "Ошибка: Пожалуйста, укажите endpoint, используя один из аргументов endpoint (например, --cn, --us_west и т.д.)")
-            exit(1)
+                "Ошибка: Пожалуйста, укажите endpoint, используя один из аргументов endpoint (например, --cn, "
+                "--us_west и т.д.)")
+            sys.exit(1)
         save_credentials(args.acc_name, args.access_id, args.access_key, args.device_id, args.endpoint_key)
     else:
         try:
@@ -93,9 +90,11 @@ if __name__ == "__main__":
             openapi.connect()
 
             # Get the status of a single device
-            response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
+            # Пример запроса
+            # response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
 
             if args.switch_state:
+                response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
                 # Получим текущее состояние устройства из ответа API
                 current_state = None
                 for item in response['result']:
@@ -123,5 +122,6 @@ if __name__ == "__main__":
                 print("Устройство выключено.")
         except FileNotFoundError:
             print(
-                f"Ошибка: Конфигурационный файл для аккаунта {args.acc_name} не найден. Пожалуйста, сначала используйте --save-credentials.")
-            exit(1)
+                f"Ошибка: Конфигурационный файл для аккаунта {args.acc_name} не найден. Пожалуйста, сначала "
+                f"используйте --save-credentials.")
+            sys.exit(1)

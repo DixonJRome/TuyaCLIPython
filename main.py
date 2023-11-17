@@ -59,7 +59,6 @@ if __name__ == "__main__":
     parser.add_argument('--access-id', type=str, help='Access ID for Tuya API')
     parser.add_argument('--access-key', type=str, help='Access Key for Tuya API')
     parser.add_argument('--device-id', type=str, help='Device ID for Tuya API')
-
     parser.add_argument('--acc_name', required=True, type=str, help='Account name for the configuration file')
 
     parser.add_argument('--socket', action='store_true', help='Use socket device type')
@@ -68,6 +67,8 @@ if __name__ == "__main__":
     parser.add_argument('--turn_on', action='store_true', help='Turn on the device')
     parser.add_argument('--turn_off', action='store_true', help='Turn off the device')
     parser.add_argument('--switch_state', action='store_true', help='Switch the state of the device to reverse')
+    parser.add_argument('--brightness', '--br', metavar='BRIGHTNESS',
+                        help='Set brightness level (0 to 100) or use keywords: min, max')
 
     parser.add_argument('--response', action='store_true', help='Print API response details')
 
@@ -89,7 +90,7 @@ if __name__ == "__main__":
     if args.save_credentials:
         if not args.endpoint_key:
             print(
-                "Ошибка: Пожалуйста, укажите endpoint, используя один из аргументов endpoint (например, --cn, "
+                "Ошибка: Пожалуйста, укажите endpoint, используя один из аргументов endpoint (например, --eu, "
                 "--us_west и т.д.)")
             sys.exit(1)
         save_credentials(args.acc_name, args.access_id, args.access_key, args.device_id, args.endpoint_key)
@@ -144,6 +145,26 @@ if __name__ == "__main__":
             if args.response:
                 response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
                 print(response)
+
+            if args.brightness:
+                brightness_value = None
+                try:
+                    brightness_value = int(args.brightness)
+                except ValueError:
+                    pass  # Если не удалось преобразовать в число, оставляем None
+
+                if args.brightness.lower() == 'min':
+                    brightness_value = 0
+                elif args.brightness.lower() == 'max':
+                    brightness_value = 1000
+
+                if brightness_value is not None:
+                    brightness_value = max(10, min(1000, brightness_value * 10))
+
+                commands = {'commands': [{'code': 'bright_value_v2', 'value': brightness_value}]}
+                openapi.post('/v1.0/iot-03/devices/{}/commands'.format(DEVICE_ID), commands)
+                print("Установлена яркость:", int(brightness_value/10))
+
         except FileNotFoundError:
             print(
                 f"Ошибка: Конфигурационный файл для аккаунта {args.acc_name} не найден. Пожалуйста, сначала "

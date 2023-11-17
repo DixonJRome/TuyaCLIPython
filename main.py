@@ -3,17 +3,19 @@ import argparse
 from tuya_connector import TuyaOpenAPI
 import json
 import sys
+
 # Определяем путь к директории текущего исполняемого файла
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 endpoints = {
-    'cn': 'https://openapi.tuyacn.com',
-    'us_west': 'https://openapi.tuyaus.com',
-    'us_east': 'https://openapi-ueaz.tuyaus.com',
     'eu_central': 'https://openapi.tuyaeu.com',
     'eu_west': 'https://openapi-weaz.tuyaeu.com',
-    'in': 'https://openapi.tuyain.com'
+    'us_west': 'https://openapi.tuyaus.com',
+    'us_east': 'https://openapi-ueaz.tuyaus.com',
+    'in': 'https://openapi.tuyain.com',
+    'cn': 'https://openapi.tuyacn.com'
 }
+
 
 # Функция для сохранения авторизационных данных в файл
 def save_credentials(account_name, access_id, access_key, device_id, endpoint_key):
@@ -23,12 +25,14 @@ def save_credentials(account_name, access_id, access_key, device_id, endpoint_ke
         'DEVICE_ID': device_id,
         'ENDPOINT_KEY': endpoint_key  # Теперь сохраняем только ключ
     }
+
     config_path = os.path.join(BASE_DIR, f"{account_name}.json")
 
     with open(config_path, 'w') as file:
         json.dump(data, file)
 
     print(f"Credentials saved to {config_path}")
+
 
 # Функция для загрузки авторизационных данных из файла
 def load_credentials(account_name):
@@ -46,8 +50,10 @@ def load_credentials(account_name):
 
     return data['ACCESS_ID'], data['ACCESS_KEY'], data['DEVICE_ID'], endpoint
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='TuyaCLIPython')
+
     parser.add_argument('--save-credentials', action='store_true', help='Save credentials to a file')
 
     parser.add_argument('--access-id', type=str, help='Access ID for Tuya API')
@@ -56,22 +62,27 @@ if __name__ == "__main__":
 
     parser.add_argument('--acc_name', required=True, type=str, help='Account name for the configuration file')
 
+    parser.add_argument('--socket', action='store_true', help='Use socket device type')
+    parser.add_argument('--bulb', action='store_true', help='Use bulb device type')
+
     parser.add_argument('--turn_on', action='store_true', help='Turn on the device')
     parser.add_argument('--turn_off', action='store_true', help='Turn off the device')
     parser.add_argument('--switch_state', action='store_true', help='Switch the state of the device to reverse')
 
-    parser.add_argument('--cn', action='store_const', dest='endpoint_key', const='cn',
-                        help='Use China Data Center endpoint')
-    parser.add_argument('--us_west', action='store_const', dest='endpoint_key', const='us_west',
-                        help='Use Western America Data Center endpoint')
-    parser.add_argument('--us_east', action='store_const', dest='endpoint_key', const='us_east',
-                        help='Use Eastern America Data Center endpoint')
+    parser.add_argument('--response', action='store_true', help='Print API response details')
+
     parser.add_argument('--eu', action='store_const', dest='endpoint_key', const='eu_central',
                         help='Use Central Europe Data Center endpoint')
     parser.add_argument('--eu_west', action='store_const', dest='endpoint_key', const='eu_west',
                         help='Use Western Europe Data Center endpoint')
+    parser.add_argument('--us_west', action='store_const', dest='endpoint_key', const='us_west',
+                        help='Use Western America Data Center endpoint')
+    parser.add_argument('--us_east', action='store_const', dest='endpoint_key', const='us_east',
+                        help='Use Eastern America Data Center endpoint')
     parser.add_argument('--in', action='store_const', dest='endpoint_key', const='in',
                         help='Use India Data Center endpoint')
+    parser.add_argument('--cn', action='store_const', dest='endpoint_key', const='cn',
+                        help='Use China Data Center endpoint')
 
     args = parser.parse_args()
 
@@ -93,33 +104,46 @@ if __name__ == "__main__":
             # Пример запроса
             # response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
 
+            if args.socket and args.bulb:
+                print("Ошибка: Нельзя использовать аргументы --socket и --bulb одновременно.")
+                sys.exit(1)
+            elif args.socket:
+                command_code = 'switch_1'
+            elif args.bulb:
+                command_code = 'switch_led'
+            else:
+                command_code = 'switch_1'  # По умолчанию используем 'switch_1'
+
             if args.switch_state:
                 response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
                 # Получим текущее состояние устройства из ответа API
                 current_state = None
                 for item in response['result']:
-                    if 'code' in item and item['code'] == 'switch_1':
+                    if 'code' in item and item['code'] == command_code:
                         current_state = item['value']
                         break
 
                 # Проверим, удалось ли определить текущее состояние
                 if current_state is not None:
                     # Переключим состояние на противоположное
-                    commands = {'commands': [{'code': 'switch_1', 'value': not current_state}]}
+                    commands = {'commands': [{'code': command_code, 'value': not current_state}]}
                     openapi.post('/v1.0/iot-03/devices/{}/commands'.format(DEVICE_ID), commands)
                     print("Device state switched.")
                 else:
                     print("Error: Couldn't determine the current state of the device.")
 
             if args.turn_on:
-                commands = {'commands': [{'code': 'switch_1', 'value': True}]}
+                commands = {'commands': [{'code': command_code, 'value': True}]}
                 openapi.post('/v1.0/iot-03/devices/{}/commands'.format(DEVICE_ID), commands)
                 print("Устройство включено.")
-
             elif args.turn_off:
-                commands = {'commands': [{'code': 'switch_1', 'value': False}]}
+                commands = {'commands': [{'code': command_code, 'value': False}]}
                 openapi.post('/v1.0/iot-03/devices/{}/commands'.format(DEVICE_ID), commands)
                 print("Устройство выключено.")
+
+            if args.response:
+                response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
+                print(response)
         except FileNotFoundError:
             print(
                 f"Ошибка: Конфигурационный файл для аккаунта {args.acc_name} не найден. Пожалуйста, сначала "

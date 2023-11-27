@@ -18,12 +18,13 @@ endpoints = {
 
 
 # Функция для сохранения авторизационных данных в файл
-def save_credentials(account_name, access_id, access_key, device_id, endpoint_key):
+def save_credentials(account_name, access_id, access_key, device_id, endpoint_key, device_type):
     data = {
         'ACCESS_ID': access_id,
         'ACCESS_KEY': access_key,
         'DEVICE_ID': device_id,
-        'ENDPOINT_KEY': endpoint_key  # Теперь сохраняем только ключ
+        'ENDPOINT_KEY': endpoint_key,  # Теперь сохраняем только ключ
+        'DEVICE_TYPE': device_type  # Сохраняем тип устройства
     }
 
     config_path = os.path.join(BASE_DIR, f"{account_name}.json")
@@ -48,7 +49,7 @@ def load_credentials(account_name):
 
     endpoint = endpoints[data['ENDPOINT_KEY']]  # Извлекаем полный URL из словаря endpoints
 
-    return data['ACCESS_ID'], data['ACCESS_KEY'], data['DEVICE_ID'], endpoint
+    return data['ACCESS_ID'], data['ACCESS_KEY'], data['DEVICE_ID'], endpoint, data['DEVICE_TYPE']
 
 
 if __name__ == "__main__":
@@ -56,10 +57,10 @@ if __name__ == "__main__":
 
     parser.add_argument('--save-credentials', action='store_true', help='Save credentials to a file')
 
+    parser.add_argument('--acc_name', required=True, type=str, help='Account name for the configuration file')
     parser.add_argument('--access-id', type=str, help='Access ID for Tuya API')
     parser.add_argument('--access-key', type=str, help='Access Key for Tuya API')
     parser.add_argument('--device-id', type=str, help='Device ID for Tuya API')
-    parser.add_argument('--acc_name', required=True, type=str, help='Account name for the configuration file')
 
     parser.add_argument('--socket', action='store_true', help='Use socket device type')
     parser.add_argument('--bulb', action='store_true', help='Use bulb device type')
@@ -88,15 +89,34 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.save_credentials:
+        if args.socket and args.bulb:
+            print("Ошибка: Нельзя использовать аргументы --socket и --bulb одновременно при сохранении.")
+            sys.exit(1)
         if not args.endpoint_key:
             print(
                 "Ошибка: Пожалуйста, укажите endpoint, используя один из аргументов endpoint (например, --eu, "
                 "--us_west и т.д.)")
             sys.exit(1)
-        save_credentials(args.acc_name, args.access_id, args.access_key, args.device_id, args.endpoint_key)
+
+        if args.socket:
+            DEVICE_TYPE = 'socket'
+        elif args.bulb:
+            DEVICE_TYPE = 'bulb'
+        else:
+            DEVICE_TYPE = 'socket'
+
+        save_credentials(args.acc_name, args.access_id, args.access_key, args.device_id, args.endpoint_key, DEVICE_TYPE)
+
     else:
         try:
-            ACCESS_ID, ACCESS_KEY, DEVICE_ID, ENDPOINT = load_credentials(args.acc_name)
+            ACCESS_ID, ACCESS_KEY, DEVICE_ID, ENDPOINT, DEVICE_TYPE = load_credentials(args.acc_name)
+
+            if DEVICE_TYPE == 'socket':
+                command_code = 'switch_1'
+            elif DEVICE_TYPE == 'bulb':
+                command_code = 'switch_led'
+            else:
+                command_code = 'switch_1'  # По умолчанию используем 'switch_1'
 
             openapi = TuyaOpenAPI(ENDPOINT, ACCESS_ID, ACCESS_KEY)
             openapi.connect()
@@ -104,16 +124,6 @@ if __name__ == "__main__":
             # Get the status of a single device
             # Пример запроса
             # response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
-
-            if args.socket and args.bulb:
-                print("Ошибка: Нельзя использовать аргументы --socket и --bulb одновременно.")
-                sys.exit(1)
-            elif args.socket:
-                command_code = 'switch_1'
-            elif args.bulb:
-                command_code = 'switch_led'
-            else:
-                command_code = 'switch_1'  # По умолчанию используем 'switch_1'
 
             if args.switch_state:
                 response = openapi.get("/v1.0/iot-03/devices/{}/status".format(DEVICE_ID))
@@ -163,7 +173,7 @@ if __name__ == "__main__":
 
                 commands = {'commands': [{'code': 'bright_value_v2', 'value': brightness_value}]}
                 openapi.post('/v1.0/iot-03/devices/{}/commands'.format(DEVICE_ID), commands)
-                print("Установлена яркость:", int(brightness_value/10))
+                print("Установлена яркость:", int(brightness_value / 10))
 
         except FileNotFoundError:
             print(
